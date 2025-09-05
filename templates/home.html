@@ -2,13 +2,14 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>SIH Bus Tracking</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIH Bus Tracker</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
+    <!-- Header -->
     <header>
-        <h1>🚍 SIH Bus Tracking App</h1>
-        <p>Track your city buses in real-time!</p>
+        <div class="logo">🚌 SIH Bus Tracker</div>
         <nav>
             <a href="/">Home</a>
             <a href="/about">About</a>
@@ -16,9 +17,12 @@
         </nav>
     </header>
 
-    <main>
-        <p>Welcome! This is the homepage served using Flask + HTML + CSS.</p>
-        <button>Track a Bus</button>
-    </main>
+    <!-- Hero Section -->
+    <section class="hero">
+        <h1>Real-Time Public Transport Tracking</h1>
+        <p>Making bus travel easier, smarter, and faster for small cities.</p>
+        <button>Track Buses Now</button>
+    </section>
 </body>
 </html>
+
