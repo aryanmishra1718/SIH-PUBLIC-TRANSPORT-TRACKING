@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Track Your Bus</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+    <style>
+        body {
+            background-color: #f5f7fa;
+            font-family: Arial, sans-serif;
+            color: #333;
+        }
+
+        header {
+            background: #0077b6;
+            color: white;
+            padding: 15px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header .logo {
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        header nav a {
+            color: white;
+            text-decoration: none;
+            margin-left: 20px;
+            font-weight: 500;
+        }
+
+        header nav a:hover {
+            text-decoration: underline;
+        }
+
+        .search-section {
+            text-align: center;
+            padding: 30px 20px;
+        }
+
+        .search-section h2 {
+            color: #0077b6;
+            margin-bottom: 15px;
+        }
+
+        .search-section input {
+            padding: 10px;
+            margin: 5px;
+            width: 200px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        .search-section button {
+            padding: 10px 20px;
+            background-color: #0077b6;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .search-section button:hover {
+            background-color: #023e8a;
+        }
+
+        #map-section {
+            text-align: center;
+            margin: 20px;
+        }
+
+        #map {
+            height: 500px;
+            width: 100%;
+            max-width: 900px;
+            margin: auto;
+            border-radius: 12px;
+            border: 3px solid #0077b6;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+        }
+
+        footer {
+            background: #0077b6;
+            color: white;
+            text-align: center;
+            padding: 15px;
+            margin-top: 40px;
+        }
+
+        .error {
+            color: red;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="logo">🚌 SIH Bus Tracker</div>
+        <nav>
+            <a href="/">Home</a>
+        </nav>
+    </header>
+
+    <!-- Search Section -->
+    <section class="search-section">
+        <h2>Find Your Bus</h2>
+        <p>Enter any one of the fields below:</p>
+        <input type="text" id="busNumber" placeholder="Enter Bus Number" />
+        <input type="text" id="busName" placeholder="Enter Bus Name" /><br/>
+        <input type="text" id="source" placeholder="Source Stop" />
+        <input type="text" id="destination" placeholder="Destination Stop" /><br/>
+        <button onclick="trackBus()">Search</button>
+        <p id="errorMsg" class="error"></p>
+    </section>
+
+    <!-- Map Section -->
+    <section id="map-section" style="display: none;">
+        <h2>Bus Location Map</h2>
+        <div id="map"></div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <p>© 2025 SIH Bus Tracker. All Rights Reserved.</p>
+    </footer>
+
+    <!-- JavaScript -->
+    <script>
+        var map, marker;
+
+        // Custom bus icon with a verified working URL
+        var busIcon = L.icon({
+            iconUrl: 'https://img.icons8.com/office/40/bus.png',
+            iconSize: [40, 40],
+            iconAnchor: [20, 40],
+            popupAnchor: [0, -40]
+        });
+
+        // Animate marker smoothly between two points
+        function animateMarker(marker, newLat, newLng) {
+            var currentPos = marker.getLatLng();
+            var steps = 30;
+            var i = 0;
+            var interval = setInterval(function() {
+                i++;
+                var lat = currentPos.lat + (newLat - currentPos.lat) * (i / steps);
+                var lng = currentPos.lng + (newLng - currentPos.lng) * (i / steps);
+                marker.setLatLng([lat, lng]);
+                if (i === steps) clearInterval(interval);
+            }, 50);
+        }
+
+        function trackBus() {
+            var busNumber = document.getElementById('busNumber').value.trim();
+            var busName = document.getElementById('busName').value.trim();
+            var source = document.getElementById('source').value.trim();
+            var destination = document.getElementById('destination').value.trim();
+
+            if (!busNumber && !busName && !source && !destination) {
+                document.getElementById('errorMsg').innerText = "⚠ Please enter at least one field!";
+                return;
+            } else {
+                document.getElementById('errorMsg').innerText = "";
+            }
+
+            document.getElementById('map-section').style.display = "block";
+
+            if (!map) {
+                map = L.map('map', {
+                    zoomControl: true,
+                    scrollWheelZoom: true
+                }).setView([28.7041, 77.1025], 13);
+
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(map);
+
+                marker = L.marker([28.7041, 77.1025], { icon: busIcon }).addTo(map)
+                    .bindPopup('Bus Location')
+                    .openPopup();
+            }
+
+            fetch('/get_bus_location')
+                .then(response => response.json())
+                .then(data => {
+                    var lat = data.latitude;
+                    var lon = data.longitude;
+
+                    animateMarker(marker, lat, lon);
+                    marker.bindPopup(`<b>Bus ID:</b> ${data.bus_id}`).openPopup();
+
+                    map.flyTo([lat, lon], 15, { animate: true, duration: 1.5 });
+                })
+                .catch(error => {
+                    console.error('Error fetching location:', error);
+                });
+        }
+    </script>
+</body>
+</html>
+
